@@ -210,7 +210,9 @@ def run(max_epochs=None,
         log_data.append({
         "epoch": epoch,
         "train/accuracy": combined_metrics["train/accuracy"],
-        "train/loss": combined_metrics["train/loss"]
+        "train/loss": combined_metrics["train/loss"],
+        "validation/accuracy": combined_metrics["validation/accuracy"],
+        "validation/loss": combined_metrics["validation/loss"],
         })
 
         if device == 'cuda':
@@ -219,7 +221,6 @@ def run(max_epochs=None,
 
             if previous_validation_accuracy is None or combined_metrics["validation/accuracy"] > previous_validation_accuracy:
                 previous_validation_accuracy = combined_metrics["validation/accuracy"]
-                patience_counter = 0  # 향상되었으므로 patience 카운터 초기화
 
             else:
                 print(f"📉 No improvement in validation accuracy.")

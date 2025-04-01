@@ -6,3 +6,4 @@ torch>=1.2.0
 tensorboard>=1.14.0
 scikit-learn
 matplotlib
+openpyxl

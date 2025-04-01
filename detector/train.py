@@ -13,6 +13,8 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from transformers import *
+import pandas as pd
+
 
 from .dataset import Corpus,EncodedDataset
 from .utils import summary
@@ -159,6 +161,7 @@ def run(max_epochs=None,
         large=False,
         learning_rate=2e-5,
         weight_decay=0,
+        patience=5,
         **kwargs):
     args = locals()
 
@@ -187,7 +190,11 @@ def run(max_epochs=None,
 
     from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter(logdir) if device == 'cuda' else None
+
     best_validation_accuracy = 0
+    patience_counter = 0
+
+    log_data = []
 
     for epoch in epoch_loop:
         train_metrics = train(model, optimizer, device, train_loader, f'Epoch {epoch}')
@@ -199,6 +206,14 @@ def run(max_epochs=None,
         combined_metrics["train/loss"] /= combined_metrics["train/epoch_size"]
         combined_metrics["validation/accuracy"] /= combined_metrics["validation/epoch_size"]
         combined_metrics["validation/loss"] /= combined_metrics["validation/epoch_size"]
+
+        log_data.append({
+        "epoch": epoch,
+        "train/accuracy": combined_metrics["train/accuracy"],
+        "train/loss": combined_metrics["train/loss"],
+        "validation/accuracy": combined_metrics["validation/accuracy"],
+        "validation/loss": combined_metrics["validation/loss"]
+        })
 
         if device == 'cuda':
             for key, value in combined_metrics.items():
@@ -215,6 +230,26 @@ def run(max_epochs=None,
                     ),
                     os.path.join(logdir, "best-model.pt")
                 )
+            else:
+                print(f"📉 No improvement in validation accuracy.")
+                patience_counter += 1    
+
+            if epoch % 10 == 0:
+                torch.save(dict(
+                    epoch=epoch,
+                    model_state_dict=model.state_dict(),
+                    optimizer_state_dict=optimizer.state_dict(),
+                    args=args
+                ), os.path.join(logdir, f"checkpoint-epoch-{epoch}.pt"))
+
+        if patience_counter >= patience:
+            print(f"🛑 Early stopping triggered at epoch {epoch}")
+            break   
+    df = pd.DataFrame(log_data)
+    excel_path = os.path.join(logdir, "training_logs.xlsx")
+    df.to_excel(excel_path, index=False)
+
+    print(f"✅ Training logs saved to {excel_path}")
 
 
 
@@ -236,6 +271,7 @@ if __name__ == '__main__':
     parser.add_argument('--large', action='store_true', help='use the roberta-large model instead of roberta-base')
     parser.add_argument('--learning-rate', type=float, default=2e-5)
     parser.add_argument('--weight-decay', type=float, default=0)
+    parser.add_argument('--patience', type=int, default=5)
     args = parser.parse_args()
 
     run(**vars(args))

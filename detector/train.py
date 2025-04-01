@@ -217,6 +217,13 @@ def run(max_epochs=None,
             for key, value in combined_metrics.items():
                 writer.add_scalar(key, value, global_step=epoch)
 
+                if previous_validation_accuracy is None or combined_metrics["validation/accuracy"] > previous_validation_accuracy:
+                    previous_validation_accuracy = combined_metrics["validation/accuracy"]
+                    patience_counter = 0  # 향상되었으므로 patience 카운터 초기화
+                else:
+                    print(f"📉 No improvement in validation accuracy.")
+                    patience_counter += 1   
+
             if combined_metrics["validation/accuracy"] > best_validation_accuracy:
                 best_validation_accuracy = combined_metrics["validation/accuracy"]
 
@@ -227,10 +234,7 @@ def run(max_epochs=None,
                         args=args
                     ),
                     os.path.join(logdir, "best-model.pt")
-                )
-            else:
-                print(f"📉 No improvement in validation accuracy.")
-                patience_counter += 1    
+                ) 
 
             if epoch % 10 == 0:
                 torch.save(dict(

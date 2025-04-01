@@ -210,9 +210,7 @@ def run(max_epochs=None,
         log_data.append({
         "epoch": epoch,
         "train/accuracy": combined_metrics["train/accuracy"],
-        "train/loss": combined_metrics["train/loss"],
-        "validation/accuracy": combined_metrics["validation/accuracy"],
-        "validation/loss": combined_metrics["validation/loss"]
+        "train/loss": combined_metrics["train/loss"]
         })
 
         if device == 'cuda':

@@ -193,6 +193,7 @@ def run(max_epochs=None,
 
     best_validation_accuracy = 0
     patience_counter = 0
+    previous_validation_loss = None
 
     log_data = []
 
@@ -219,9 +220,9 @@ def run(max_epochs=None,
             for key, value in combined_metrics.items():
                 writer.add_scalar(key, value, global_step=epoch)
 
-            if previous_validation_accuracy is None or combined_metrics["validation/accuracy"] > previous_validation_accuracy:
-                previous_validation_accuracy = combined_metrics["validation/accuracy"]
-
+            if previous_validation_loss is None or combined_metrics["validation/loss"] > previous_validation_loss:
+                previous_validation_loss = combined_metrics["validation/loss"]
+                patience_counter=0
             else:
                 print(f"📉 No improvement in validation accuracy.")
                 patience_counter += 1   
@@ -248,6 +249,14 @@ def run(max_epochs=None,
 
         if patience_counter >= patience:
             print(f"🛑 Early stopping triggered at epoch {epoch}")
+            torch.save(dict(
+                    epoch=epoch,
+                    model_state_dict=model.state_dict(),
+                    optimizer_state_dict=optimizer.state_dict(),
+                    args=args
+                ),
+                os.path.join(logdir, "early-"+epoch+"-epoch.pt")
+            ) 
             break   
     df = pd.DataFrame(log_data)
     excel_path = os.path.join(logdir, "training_logs.xlsx")

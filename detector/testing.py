@@ -72,7 +72,7 @@ def test(model: nn.Module, device: str, loader: DataLoader, desc='test'):
     
     # Confusion Matrix 시각화
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Real', 'Fake'], yticklabels=['Real', 'Fake'])
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Fake', 'Real'], yticklabels=['Fake', 'Real'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')

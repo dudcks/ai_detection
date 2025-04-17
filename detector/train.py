@@ -224,7 +224,7 @@ def run(max_epochs=None,
                 previous_validation_loss = combined_metrics["validation/loss"]
                 patience_counter=0
             else:
-                print(f"📉 No improvement in validation accuracy.")
+                print(f"📉 No improvement in validation loss.")
                 patience_counter += 1   
 
             if combined_metrics["validation/accuracy"] > best_validation_accuracy:

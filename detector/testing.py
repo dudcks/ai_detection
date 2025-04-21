@@ -5,6 +5,7 @@ from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
+from transformers import logging as transformers_logging
 from .dataset import Corpus,EncodedDataset
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import confusion_matrix
@@ -92,6 +93,8 @@ def test(model: nn.Module, device: str, loader: DataLoader, desc='test'):
 
 def run(model_path, data_dir='data', real_dataset='webtext', fake_dataset='xl-1542M',
              batch_size=24, max_sequence_length=128, device=None, large=False, random_sequence_length=False,):
+    
+    transformers_logging.set_verbosity_error()
     if device is None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print('device:', device)

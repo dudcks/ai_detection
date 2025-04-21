@@ -76,7 +76,10 @@ def test(model: nn.Module, device: str, loader: DataLoader, desc='test'):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Confusion Matrix')
-    plt.show()
+  
+    save_filename = 'confusion_matrix.png'
+    plt.savefig(save_filename, dpi=300, bbox_inches='tight')
+    plt.close()
 
     return {
         "test/accuracy": test_accuracy / test_epoch_size,
@@ -98,8 +101,8 @@ def run(model_path, data_dir='data', real_dataset='webtext', fake_dataset='xl-15
     model = RobertaForSequenceClassification.from_pretrained(model_name).to(device)
 
     # 저장된 모델 불러오기
-    checkpoint = torch.load(model_path, map_location=device)
-    model.load_state_dict(checkpoint["model_state_dict"], strict=True)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
 

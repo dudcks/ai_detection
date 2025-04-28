@@ -26,16 +26,10 @@ def load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, batch_size,
 
     real_corpus = Corpus(real_dataset, data_dir=data_dir)
 
-    if fake_dataset == "TWO":
-        real_train, real_valid = real_corpus.train * 2, real_corpus.valid * 2
-        fake_corpora = [Corpus(name, data_dir=data_dir) for name in ['xl-1542M', 'xl-1542M-k40']]
-        fake_train = sum([corpus.train for corpus in fake_corpora], [])
-        fake_valid = sum([corpus.valid for corpus in fake_corpora], [])
-    else:
-        fake_corpus = Corpus(fake_dataset, data_dir=data_dir)
+    fake_corpus = Corpus(fake_dataset, data_dir=data_dir)
 
-        real_train, real_valid = real_corpus.train, real_corpus.valid
-        fake_train, fake_valid = fake_corpus.train, fake_corpus.valid
+    real_train, real_valid = real_corpus.train, real_corpus.valid
+    fake_train, fake_valid = fake_corpus.train, fake_corpus.valid
 
     Sampler = RandomSampler
 
@@ -44,7 +38,7 @@ def load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, batch_size,
                                    epoch_size, token_dropout, seed)
     train_loader = DataLoader(train_dataset, batch_size, sampler=Sampler(train_dataset), num_workers=0)
 
-    validation_dataset = EncodedDataset(real_valid, fake_valid, tokenizer)
+    validation_dataset = EncodedDataset(real_valid, fake_valid, tokenizer, max_sequence_length=max_sequence_length)
     validation_loader = DataLoader(validation_dataset, batch_size=1, sampler=Sampler(validation_dataset))
 
     return train_loader, validation_loader
@@ -161,7 +155,6 @@ def run(max_epochs,
         real_dataset,
         fake_dataset,
         token_dropout,
-        large,
         learning_rate,
         weight_decay,
         patience,
@@ -176,7 +169,9 @@ def run(max_epochs,
 
     print('device:', device)
 
-    model_name = "klue/roberta-base"
+    #model_name = "klue/roberta-base"
+    model_name = "skt/kobert-base-v1"
+
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     vocab_size = tokenizer.vocab_size
     d_model = 768 # RoBERTa-base나 KoBERT는 보통 768 차원 사용 (원하는 값으로 조정 가능)
@@ -299,11 +294,9 @@ if __name__ == '__main__':
     parser.add_argument('--epoch-size', type=int, default=None)
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--data-dir', type=str, default='data')
-    parser.add_argument('--real-dataset', type=str, default='webtext')
-    parser.add_argument('--fake-dataset', type=str, default='xl-1542M')
+    parser.add_argument('--real-dataset', type=str, default='human_data')
+    parser.add_argument('--fake-dataset', type=str, default='ai_data')
     parser.add_argument('--token-dropout', type=float, default=None)
-
-    parser.add_argument('--large', action='store_true', help='use the roberta-large model instead of roberta-base')
     parser.add_argument('--learning-rate', type=float, default=2e-5)
     parser.add_argument('--weight-decay', type=float, default=0)
     parser.add_argument('--patience', type=int, default=5)

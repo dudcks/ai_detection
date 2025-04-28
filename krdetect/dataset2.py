@@ -20,7 +20,7 @@ def load_texts(data_file, expected_size=None):
 class Corpus:
     def __init__(self, name, data_dir='data', skip_train=False):
         self.name = name
-        self.train = load_texts(f'{data_dir}/{name}.train.jsonl', expected_size=250000) if not skip_train else None
+        self.train = load_texts(f'{data_dir}/{name}.train.jsonl', expected_size=7429) if not skip_train else None
         self.test = load_texts(f'{data_dir}/{name}.test.jsonl', expected_size=5000)
         self.valid = load_texts(f'{data_dir}/{name}.valid.jsonl', expected_size=5000)
 

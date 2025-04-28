@@ -14,6 +14,25 @@
 ---
 
 ## 📌 전체 파이프라인 요약
+```
+[text] → [Tokenizer] → [Transformer] → [Classifier] → [Label]
+```
+
+```
+1. JSONL 데이터 불러오기
+→ {"id":1 "text": "이것은 AI가 쓴 글입니다." }
+
+2. Tokenizer (예: KoBERT)
+→ 텍스트를 토큰 ID 시퀀스로 변환 (숫자 벡터)
+
+3. Transformer 인코더 입력
+→ 이 숫자 시퀀스를 Transformer에 넣어서
+→ 문장 전체의 특징 벡터 추출 ([CLS] 위치 벡터)
+
+4. Classifier (Linear Layer)
+→ 특징 벡터를 입력으로 받아
+→ 사람/AI 중 하나로 분류 (라벨 예측)
+```
 
 ```
 JSONL 텍스트 데이터

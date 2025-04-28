@@ -53,7 +53,7 @@ def accuracy_sum(logits, labels):
     assert classification.shape == labels.shape
     return (classification == labels).float().sum().item()
 
-        #  모델 = roBERTa    Adam       cpu or gpu   학습 데이터 로드     진행 표시줄
+
 def train(model: nn.Module, optimizer, criterion, device: str, loader: DataLoader, desc='Train'):
     model.train() #모델을 train모드로
 
@@ -70,14 +70,10 @@ def train(model: nn.Module, optimizer, criterion, device: str, loader: DataLoade
 
             optimizer.zero_grad()
 
-            #순전파
-            # print(f"Input texts shape: {texts.shape}")
-            # print(f"Input masks shape: {masks.shape}")
             logits = model(texts, attention_mask=masks)
 
             loss = criterion(logits, labels)
 
-            #역전파
             loss.backward()
             optimizer.step()
 
@@ -169,18 +165,14 @@ def run(max_epochs,
 
     print('device:', device)
 
-    #model_name = "klue/roberta-base"
-    model_name = "skt/kobert-base-v1"
+    model_name = "klue/roberta-base"
+    #model_name = "skt/kobert-base-v1"
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    vocab_size = tokenizer.vocab_size
-    d_model = 768 # RoBERTa-base나 KoBERT는 보통 768 차원 사용 (원하는 값으로 조정 가능)
-    nhead = 12    # d_model이 768일 때 RoBERTa-base나 KoBERT는 보통 12 사용 (d_model % nhead == 0 이어야 함)
-    num_layers = 4
     num_classes = 2
 
     model = TransformerClassifier(
-        vocab_size=vocab_size,
+        vocab_size=tokenizer.vocab_size,
         d_model=d_model,
         nhead=nhead,
         num_layers=num_layers,

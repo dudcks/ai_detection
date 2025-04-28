@@ -4,16 +4,17 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
-from transformers import RobertaTokenizer, RobertaForSequenceClassification
-from transformers import logging as transformers_logging
-from .dataset import Corpus,EncodedDataset
+from transformers import AutoTokenizer
+from .dataset2 import Corpus,EncodedDataset
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
+from .model import TransformerClassifier
 
-def load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, batch_size,
-                  max_sequence_length, random_sequence_length, epoch_size=None, token_dropout=None, seed=None):
+
+def load_datasets(data_dir, real_dataset, fake_dataset, tokenizer,
+                  max_sequence_length):
 
     real_corpus = Corpus(real_dataset, data_dir=data_dir)
 
@@ -22,12 +23,13 @@ def load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, batch_size,
 
     Sampler = RandomSampler 
 
-    test_dataset = EncodedDataset(real_corpus.test, fake_test, tokenizer)
+    test_dataset = EncodedDataset(real_corpus.test, fake_test, tokenizer,  max_sequence_length=max_sequence_length)
     test_loader = DataLoader(test_dataset, batch_size=1, sampler=Sampler(test_dataset))  # test loader만 반환
 
     return test_loader
 
 def test(model: nn.Module, device: str, loader: DataLoader, desc='test'):
+    criterion = nn.CrossEntropyLoss()
     model.eval()
 
     all_preds = []
@@ -42,9 +44,8 @@ def test(model: nn.Module, device: str, loader: DataLoader, desc='test'):
             texts, masks, labels = texts.to(device), masks.to(device), labels.to(device)
             batch_size = texts.shape[0]
 
-            outputs = model(texts, attention_mask=masks, labels=labels)
-            loss = outputs.loss
-            logits = outputs.logits
+            logits = model(texts, attention_mask=masks)
+            loss = criterion(logits, labels)
 
             preds = logits.argmax(dim=-1).cpu().numpy()  # 예측값
             labels = labels.cpu().numpy()  # 실제 정답
@@ -87,26 +88,54 @@ def test(model: nn.Module, device: str, loader: DataLoader, desc='test'):
     }
 
 
-def run(model_path, data_dir='data', real_dataset='webtext', fake_dataset='xl-1542M',
-             batch_size=24, max_sequence_length=128, device=None, large=False, random_sequence_length=False,):
-    
-    transformers_logging.set_verbosity_error()
+def run(model_path,
+        data_dir,
+        real_dataset,
+        fake_dataset,
+        batch_size,
+        max_sequence_length,
+        device,
+        random_sequence_length):
+
     if device is None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print('device:', device)
 
-    model_name = 'roberta-large' if large else 'roberta-base'
-    tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    model = RobertaForSequenceClassification.from_pretrained(model_name).to(device)
+    model_name = "klue/roberta-base"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    # 저장된 모델 불러오기
-    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+    checkpoint = torch.load(model_path, map_location=device)
+
+    saved_args = checkpoint.get('args')
+
+    if saved_args:
+        config = vars(saved_args) if not isinstance(saved_args, dict) else saved_args
+        d_model = config.get('d_model', 768)
+        nhead = config.get('nhead', 12)
+        num_layers = config.get('num_layers', 2)
+        num_classes = config.get('num_classes', 2) 
+        max_sequence_length = config.get('max_sequence_length', max_sequence_length)
+    else:
+        print("_____Warning: Model config not found in checkpoint, using hardcoded values._____")
+        d_model = 768
+        nhead = 12
+        num_layers = 2
+        num_classes = 2
+    
+    model = TransformerClassifier(
+        vocab_size=tokenizer.vocab_size,
+        d_model=d_model,
+        nhead=nhead,
+        num_layers=num_layers,
+        num_classes=num_classes,
+        max_len=max_sequence_length # 테스트 시 인자로 받은 값 사용
+    )
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
 
     # 테스트 데이터 로드
-    test_loader = load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, batch_size, max_sequence_length, random_sequence_length)
+    test_loader = load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, max_sequence_length)
 
     # 테스트 실행
     test_metrics = test(model, device, test_loader)
@@ -118,14 +147,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--model_path', type=str, default='./logs/best-model.pt')
     parser.add_argument('--device', type=str, default=None)
-    parser.add_argument('--batch-size', type=int, default=34)
+    parser.add_argument('--batch-size', type=int, default=24)
     parser.add_argument('--max-sequence-length', type=int, default=128)
     parser.add_argument('--data-dir', type=str, default='data')
-    parser.add_argument('--real-dataset', type=str, default='webtext')
-    parser.add_argument('--fake-dataset', type=str, default='xl-1542M')
+    parser.add_argument('--real-dataset', type=str, default='human_data')
+    parser.add_argument('--fake-dataset', type=str, default='ai_data')
     parser.add_argument('--random-sequence-length', action='store_true')
-    parser.add_argument('--large', action='store_true', help='use the roberta-large model instead of roberta-base')
-
+   
     args = parser.parse_args()
 
     run(**vars(args))

@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--model_path', type=str, default='./logs/best-model.pt')
     parser.add_argument('--device', type=str, default=None)
-    parser.add_argument('--batch-size', type=int, default=24)
+    parser.add_argument('--batch-size', type=int, default=34)
     parser.add_argument('--max-sequence-length', type=int, default=128)
     parser.add_argument('--data-dir', type=str, default='data')
     parser.add_argument('--real-dataset', type=str, default='webtext')

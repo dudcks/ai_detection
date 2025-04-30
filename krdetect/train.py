@@ -294,7 +294,7 @@ if __name__ == '__main__':
     parser.add_argument('--patience', type=int, default=5)
     parser.add_argument('--d-model', type=int, default=768, help="Dimension of model embeddings and hidden states")
     parser.add_argument('--nhead', type=int, default=12, help="Number of attention heads")
-    parser.add_argument('--num-layers', type=int, default=2, help="Number of transformer encoder layers")
+    parser.add_argument('--num-layers', type=int, default=8, help="Number of transformer encoder layers")
 
     args = parser.parse_args()
 

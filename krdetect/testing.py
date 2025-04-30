@@ -5,7 +5,7 @@ from torch import nn
 from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from .dataset2 import Corpus,EncodedDataset
+from .testdataset import Corpus,EncodedDataset
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
@@ -19,12 +19,12 @@ def load_datasets(data_dir, real_dataset, fake_dataset, tokenizer,
     real_corpus = Corpus(real_dataset, data_dir=data_dir)
 
     fake_corpus = Corpus(fake_dataset, data_dir=data_dir)
-    fake_test = fake_corpus.test  # fake 데이터셋의 test 데이터
+    fake_test = fake_corpus.test
 
     Sampler = RandomSampler 
 
     test_dataset = EncodedDataset(real_corpus.test, fake_test, tokenizer,  max_sequence_length=max_sequence_length)
-    test_loader = DataLoader(test_dataset, batch_size=1, sampler=Sampler(test_dataset))  # test loader만 반환
+    test_loader = DataLoader(test_dataset, batch_size=1, sampler=Sampler(test_dataset))
 
     return test_loader
 
@@ -112,14 +112,14 @@ def run(model_path,
         config = vars(saved_args) if not isinstance(saved_args, dict) else saved_args
         d_model = config.get('d_model', 768)
         nhead = config.get('nhead', 12)
-        num_layers = config.get('num_layers', 2)
+        num_layers = config.get('num_layers', 4)
         num_classes = config.get('num_classes', 2) 
         max_sequence_length = config.get('max_sequence_length', max_sequence_length)
     else:
         print("_____Warning: Model config not found in checkpoint, using hardcoded values._____")
         d_model = 768
         nhead = 12
-        num_layers = 2
+        num_layers = 4
         num_classes = 2
     
     model = TransformerClassifier(

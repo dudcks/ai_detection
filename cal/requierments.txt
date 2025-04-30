@@ -1,3 +1,2 @@
 konlpy
 nltk
-openjdk-11-jdk

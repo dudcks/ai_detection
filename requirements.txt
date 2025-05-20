@@ -9,3 +9,4 @@ matplotlib
 openpyxl
 pandas
 hf_xet
+kss

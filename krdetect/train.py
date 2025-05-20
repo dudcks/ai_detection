@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, RandomSampler
 from tqdm import tqdm
 from transformers import AutoTokenizer
 import pandas as pd
-from .model import TransformerClassifier
+from .model import TransformerClassifier, TransformerCNNClassifier, TransformerLSTMClassifier
 
 
 from .dataset2 import Corpus,EncodedDataset
@@ -180,6 +180,29 @@ def run(max_epochs,
         max_len=max_sequence_length
     ).to(device)
     criterion = nn.CrossEntropyLoss().to(device)
+
+    # modle = TransformerLSTMClassifier(
+    #     vocab_size=tokenizer.vocab_size,
+    #     d_model=d_model,
+    #     nhead=nhead,
+    #     num_layers=num_layers,
+    #     num_classes=num_classes,
+    #     max_len=max_sequence_length,
+    #     lstm_hidden_size=128,
+    #     lstm_layers=1,
+    #     bidirectional=True
+    # ).to(device)
+
+    # modle = TransformerCNNClassifier(
+    #     vocab_size=tokenizer.vocab_size,
+    #     d_model=d_model,
+    #     nhead=nhead,
+    #     num_layers=num_layers,
+    #     num_classes=num_classes,
+    #     max_len=max_sequence_length,
+    #     cnn_out_channels=128,
+    #     cnn_kernel_size=3
+    # ).to(device)
 
     train_loader, validation_loader = load_datasets(data_dir, real_dataset, fake_dataset, tokenizer, batch_size,
                                                     max_sequence_length, random_sequence_length, epoch_size,

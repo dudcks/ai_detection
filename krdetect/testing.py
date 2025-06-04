@@ -145,7 +145,7 @@ def run(model_path,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--model_path', type=str, default='./logs/best-model.pt')
+    parser.add_argument('--model_path', type=str, default='./logs/model_kor1.pt')
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--batch-size', type=int, default=24)
     parser.add_argument('--max-sequence-length', type=int, default=128)

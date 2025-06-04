@@ -13,7 +13,7 @@ model_name = "klue/roberta-base"
 #model_name = "skt/kobert-base-v1"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-checkpoint = torch.load("../logs/best-model.pt", map_location=device, weights_only=True)
+checkpoint = torch.load("../logs/model_kor1.pt", map_location=device, weights_only=True)
 
 saved_args = checkpoint.get('args')
 
@@ -39,12 +39,11 @@ model = TransformerClassifier(
     num_classes=num_classes,
     max_len=max_sequence_length
 )
-#print(num_layers)
 model.load_state_dict(checkpoint["model_state_dict"])
 model.to(device)
 model.eval()
 
-def detect_ai_generated_text_kor(full_text, tokenizer, model, device, max_sequence_length=128):
+def detect_ai_generated_text_kor(full_text, tokenizer, model, device, max_sequence_length=128):  
     try:
         import kss
         KSS_AVAILABLE = True
@@ -71,6 +70,8 @@ def detect_ai_generated_text_kor(full_text, tokenizer, model, device, max_sequen
     chunks = []
     current_chunk_sentences = []
     max_len_for_chunking = max_sequence_length - 2 
+    final_max_prob=None
+    final_avg_prob=None
 
     current_length = 0
     for sentence in sentences:
@@ -99,13 +100,13 @@ def detect_ai_generated_text_kor(full_text, tokenizer, model, device, max_sequen
         chunks.append(" ".join(current_chunk_sentences))
 
     chunk_probabilities = []
-    print("\n--- 청크별 AI 생성 확률 ---")
+    #print("\n--- 청크별 AI 생성 확률 ---")
     for i, chunk_text in enumerate(chunks):
         prob = get_ai_prob_for_chunk(chunk_text, tokenizer, model, device, max_sequence_length)
         if prob is not None:
             chunk_probabilities.append(prob)
             chunk_preview = chunk_text[:80].replace("\n", " ") + ("..." if len(chunk_text) > 80 else "")
-            print(f"  청크 {i+1:>{len(str(len(chunks)))}}({len(chunk_text)}):  {prob:.4f}  (내용: \"{chunk_preview}\")")
+            #print(f"  청크 {i+1:>{len(str(len(chunks)))}}({len(chunk_text)}):  {prob:.4f}  (내용: \"{chunk_preview}\")")
         else:
             chunk_preview = chunk_text[:80].replace("\n", " ") + ("..." if len(chunk_text) > 80 else "")
             print(f"  청크 {i+1:>{len(str(len(chunks)))}}: 처리 오류 (내용: \"{chunk_preview}\")")
@@ -113,23 +114,20 @@ def detect_ai_generated_text_kor(full_text, tokenizer, model, device, max_sequen
     # 4. 최종 확률 계산 (평균) 및 출력
     if chunk_probabilities:
         final_avg_prob = sum(chunk_probabilities) / len(chunk_probabilities)
-        print("\n--- 최종 집계 결과 ---")
-        print(f"평균 AI 생성 확률: {final_avg_prob:.4f}")
+        #print("\n--- 최종 집계 결과 ---")
+        #print(f"평균 AI 생성 확률: {final_avg_prob:.4f}")
         # 필요하다면 다른 집계 방식 추가 가능 (e.g., 최대값)
         final_max_prob = max(chunk_probabilities)
-        print(f"최대 AI 생성 확률: {final_max_prob:.4f}")
-    else:
-        print("\n분석할 유효한 텍스트 청크가 없습니다.")
-
-    if final_avg_prob is None:
-        return {
-            "max_ai_probability": "분석 실패",
-            "avg_ai_probability": "분석 실패",
-        }
-    else:
+        #print(f"최대 AI 생성 확률: {final_max_prob:.4f}")
         return {
             "max_ai_probability": final_max_prob,
             "avg_ai_probability": final_avg_prob,
+        }
+    else:
+        #print("\n분석할 유효한 텍스트 청크가 없음: "+ full_text)
+        return {
+            "max_ai_probability": "유효한 텍스트가 없음",
+            "avg_ai_probability": "유효한 텍스트가 없음",
         }
 
 def get_ai_prob_for_chunk(text_chunk, tokenizer, model, device, max_len):
@@ -170,13 +168,13 @@ def get_text_from_url(url):
         headers = {"User-Agent": "Mozilla/5.0"}  # 봇 차단 우회
         response = requests.get(url, headers=headers, timeout=5)
         if response.status_code != 200:
+            print("오류(not 200)")
             return None
 
         doc = Document(response.text)
         doc_content = doc.summary()
 
         soup = BeautifulSoup(doc_content, "html.parser")
-
         return soup.get_text()
     
     except Exception as e:
@@ -185,33 +183,72 @@ def get_text_from_url(url):
         log_file.write(url+"\n",e)
         log_file.close()
         return None
+    
+def get_error_text_from_url(blog_url):
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    res = requests.get(blog_url, headers=headers)
+    soup = BeautifulSoup(res.text, "html.parser")
+
+    # iframe src 찾기
+    iframe = soup.find("iframe", {"id": "mainFrame"})
+    if not iframe:
+        print("iframe을 찾을 수 없음 ❌")
+        return None
+
+    iframe_src = iframe["src"]
+    base_url = "https://blog.naver.com"
+    full_iframe_url = base_url + iframe_src
+
+    # iframe 주소로 다시 요청
+    res2 = requests.get(full_iframe_url, headers=headers)
+    soup2 = BeautifulSoup(res2.text, "html.parser")
+
+    # 본문 추출
+    content = soup2.select_one(".se-main-container")  # 신에디터
+    if not content:
+        content = soup2.select_one("#postViewArea")   # 구에디터
+
+    if content:
+        return content.get_text(separator="\n")
+    else:
+        print("본문이 없습니다 ❌")
+        return None
 
 def main():
 
     links = [
+        "https://blog.naver.com/shinkyoungup/110092617672",
+        "https://blog.naver.com/skditjdqja12/140178347564",
+        "https://blog.naver.com/kkulmatapp/90084037882",
         "https://m.blog.naver.com/junkigi11/20173492987",
-        # "https://ai3886.tistory.com/1",
-        # "https://ai3886.tistory.com/2",
-        # "https://ai3886.tistory.com/3",
-        # "https://ai3886.tistory.com/4",
-        # "https://ai3886.tistory.com/5",
-        # "https://ai3886.tistory.com/6",
-        # "https://ai3886.tistory.com/7",
-        # "https://ai3886.tistory.com/8",
-        # "https://ai3886.tistory.com/9",
-        # "https://ai3886.tistory.com/10",
-        # "https://ai3886.tistory.com/11",
-        # "https://ai3886.tistory.com/12",
-        # "https://ai3886.tistory.com/13",
-        # "https://ai3886.tistory.com/14",
-        # "https://ai3886.tistory.com/15",
-        # "https://ai3886.tistory.com/16",
-        # "https://hrhobby.tistory.com/39",
+        "https://ai3886.tistory.com/1",
+        "https://ai3886.tistory.com/2",
+        "https://ai3886.tistory.com/3",
+        "https://ai3886.tistory.com/4",
+        "https://ai3886.tistory.com/5",
+        "https://ai3886.tistory.com/6",
+        "https://ai3886.tistory.com/7",
+        "https://ai3886.tistory.com/8",
+        "https://ai3886.tistory.com/9",
+        "https://ai3886.tistory.com/10",
+        "https://ai3886.tistory.com/11",
+        "https://ai3886.tistory.com/12",
+        "https://ai3886.tistory.com/13",
+        "https://ai3886.tistory.com/14",
+        "https://ai3886.tistory.com/15",
+        "https://ai3886.tistory.com/16",
+        "https://hrhobby.tistory.com/39",
 
     ]
     results = []
     for url in links:
         full_text = get_text_from_url(url)
+        if not full_text or full_text.strip() == "":
+            print("내용 없음")
+            full_text = get_error_text_from_url(url) 
         if not full_text:
             results.append({"url": url, "ai_probability": "크롤링 실패"})
             continue
@@ -223,10 +260,9 @@ def main():
         })
     for res in results:
         print(f"URL: {res['url']}")
-        print(f"최대 AI 생성 확률: {res['max_ai_probability']}")
+        #print(f"최대 AI 생성 확률: {res['max_ai_probability']}")
         print(f"평균 AI 생성 확률: {res['avg_ai_probability']}")
         print("-" * 50)
-        time.sleep(1)
-        # 각 URL 사이에 1초 대기 (크롤링 서버 부하 방지)
+
 
 main()

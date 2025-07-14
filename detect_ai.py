@@ -7,8 +7,8 @@ import torch.nn.functional as F
 from model import TransformerClassifier
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model_name = "klue/roberta-base"
-#model_name = "skt/kobert-base-v1"
+#model_name = "klue/roberta-base"
+model_name = "skt/kobert-base-v1"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 checkpoint = torch.load("best-model.pt", map_location=device, weights_only=True)
@@ -30,7 +30,7 @@ else:
     num_classes = 2
 
 model = TransformerClassifier(
-    vocab_size=tokenizer.vocab_size,
+    vocab_size=len(tokenizer.get_vocab()),
     d_model=d_model,
     nhead=nhead,
     num_layers=num_layers,

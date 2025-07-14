@@ -1,6 +1,8 @@
 .mypy_cache/
 data/
+dataset/
 logs/
 */__pycache__/*
 **/__pycache__/
 *.pyc
+images/

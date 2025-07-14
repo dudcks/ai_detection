@@ -11,3 +11,4 @@ pandas
 hf_xet
 kss
 webdriver-manager
+sentencepiece

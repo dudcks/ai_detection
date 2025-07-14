@@ -32,8 +32,6 @@ class EncodedDataset(Dataset):
         self.real_texts = real_texts
         self.fake_texts = fake_texts
         self.tokenizer = tokenizer
-        # *** max_sequence_length를 내부적으로 사용할 때 2를 빼줍니다 (BOS/EOS 토큰 공간 확보) ***
-        # None 체크는 유지
         self.effective_max_len = max_sequence_length - 2 if max_sequence_length is not None else None
         self.max_sequence_length = max_sequence_length # 원래 값도 유지 (패딩 계산 등에 필요할 수 있음)
 
@@ -42,27 +40,26 @@ class EncodedDataset(Dataset):
         self.token_dropout = token_dropout
         self.random = np.random.RandomState(seed)
 
+        
+        self.all_texts = (
+            [(text, 0) for text in self.fake_texts] +
+            [(text, 1) for text in self.real_texts]
+        )
+
 
     def __len__(self):
         return self.epoch_size or len(self.real_texts) + len(self.fake_texts)
 
     def __getitem__(self, index):
         if self.epoch_size is not None:
-            label = self.random.randint(2)
-            texts = [self.fake_texts, self.real_texts][label]
-            text = texts[self.random.randint(len(texts))]
+            text, label = self.all_texts[self.random.randint(len(self.all_texts))]
         else:
-            if index < len(self.real_texts):
-                text = self.real_texts[index]
-                label = 1
-            else:
-                text = self.fake_texts[index - len(self.real_texts)]
-                label = 0
+            text, label = self.all_texts[index]
 
-        tokens = self.tokenizer.encode(text) # raw 토큰화
+
+        tokens = self.tokenizer.encode(text)
 
         if self.effective_max_len is None: # max_sequence_length가 주어지지 않은 경우
-            # 이 로직은 현재 코드에서 사용되지 않을 수 있으나, 원래 코드 참고하여 유지
             tokens = tokens[:self.tokenizer.model_max_length - 2] # BOS/EOS 고려
         else:
             # effective_max_len (원래 max_len - 2) 기준으로 토큰 슬라이싱
@@ -84,19 +81,13 @@ class EncodedDataset(Dataset):
             tokens[dropout_mask] = self.tokenizer.unk_token_id
             tokens = tokens.tolist()
 
-        # *** 최종 텐서 생성 및 패딩 (총 길이를 max_sequence_length로 맞춤) ***
-        # 현재 tokens 길이는 최대 effective_max_len (126)
 
-        # 필요한 패딩 계산 (BOS/EOS 포함해서 최종 길이가 max_sequence_length가 되도록)
-        # 현재 토큰 수 + BOS(1) + EOS(1) + 패딩 = max_sequence_length(128)
-        # 패딩 수 = max_sequence_length - (len(tokens) + 2)
         num_padding = self.max_sequence_length - (len(tokens) + 2)
         padding = [self.tokenizer.pad_token_id] * num_padding
 
         # 최종 텐서 생성
         final_tokens = torch.tensor([self.tokenizer.bos_token_id] + tokens + [self.tokenizer.eos_token_id] + padding)
 
-        # 마스크 생성 (패딩 부분은 0)
         mask = torch.ones(self.max_sequence_length, dtype=torch.long) # 항상 max_sequence_length 길이
         mask[len(tokens)+2:] = 0 # BOS+tokens+EOS 이후 부분을 0으로
 

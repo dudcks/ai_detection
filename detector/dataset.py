@@ -57,7 +57,6 @@ class EncodedDataset(Dataset):
         tokens = self.tokenizer.encode(text)
 
         if self.max_sequence_length is None:
-            #tokens = tokens[:self.tokenizer.max_len - 2]
             tokens = tokens[:self.tokenizer.model_max_length - 2]
 
         else:
